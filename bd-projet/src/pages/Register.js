@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "../services/api";
+import './register.css';
 
 const Register = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     numElecteur: "",
     numCNI: "",
@@ -9,6 +12,7 @@ const Register = () => {
     bureauVote: "",
     email: "",
     telephone: "",
+    prenom: "",
   });
 
   const [step, setStep] = useState(1);
@@ -25,21 +29,26 @@ const Register = () => {
         if (res.data.valid) {
           setStep(2);
         } else {
-          alert("Informations incorrectes.");
+          alert("Informations incorrectes ou électeur introuvable.");
         }
       } else {
-        await axios.post("/register-elector", formData);
-        alert("Inscription réussie, code envoyé !");
+        const res = await axios.post("/register-elector", formData);
+        if (res.data.success) {
+          alert("Inscription réussie, code envoyé !");
+          navigate("/login");
+        } else {
+          alert("Erreur lors de l'inscription.");
+        }
       }
     } catch (error) {
-      console.error(error);
-      alert("Erreur d'inscription.");
+      console.error("Erreur backend:", error);
+      alert(error.response?.data?.error || "Erreur d'inscription.");
     }
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto bg-white shadow-md rounded-md">
-      <h2 className="text-xl font-bold mb-4">Inscription des électeurs</h2>
+    <div className="container">
+      <h2>Inscription des électeurs</h2>
       <form onSubmit={handleSubmit}>
         {step === 1 ? (
           <>
@@ -50,11 +59,12 @@ const Register = () => {
           </>
         ) : (
           <>
+            <input name="prenom" placeholder="Prénom" onChange={handleChange} required />
             <input name="email" placeholder="Adresse email" type="email" onChange={handleChange} required />
             <input name="telephone" placeholder="Numéro de téléphone" onChange={handleChange} required />
           </>
         )}
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">{step === 1 ? "Vérifier" : "S'inscrire"}</button>
+        <button type="submit">{step === 1 ? "Vérifier" : "S'inscrire"}</button>
       </form>
     </div>
   );
