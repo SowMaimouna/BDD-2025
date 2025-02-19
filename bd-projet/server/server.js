@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const mysql = require("mysql");
-const twilio = require("twilio");
+const nodemailer = require("nodemailer");
 
 const app = express();
 app.use(cors());
@@ -25,48 +25,76 @@ db.connect((err) => {
 // Vérification de l’électeur
 app.post("/verify-elector", (req, res) => {
   const { numElecteur, numCNI, nom, bureauVote } = req.body;
+
+  if (!numElecteur || !numCNI || !nom || !bureauVote) {
+    return res.status(400).json({ error: "Tous les champs sont obligatoires" });
+  }
+
   const query = `SELECT * FROM electeurs WHERE numero_carte_electeur = ? AND numero_carte_identite = ? AND nom = ? AND bureau_vote = ?`;
   
   db.query(query, [numElecteur, numCNI, nom, bureauVote], (err, result) => {
-    if (err) return res.status(500).json({ error: err });
-    if (result.length > 0) res.json({ valid: true });
-    else res.json({ valid: false });
+    if (err) return res.status(500).json({ error: "Erreur serveur" });
+    if (result.length > 0) return res.json({ valid: true });
+    res.json({ valid: false });
   });
 });
 
 // Enregistrement de l’électeur et envoi du code OTP
 app.post("/register-elector", (req, res) => {
-  const { numElecteur, email, telephone } = req.body;
+  const { numElecteur, prenom, email, telephone } = req.body;
+
+  if (!numElecteur || !prenom || !email || !telephone) {
+    return res.status(400).json({ error: "Tous les champs sont obligatoires" });
+  }
+
   const codeOTP = Math.floor(100000 + Math.random() * 900000);
 
-  const query = `UPDATE electeurs SET email = ?, telephone = ?, code_authentification = ? WHERE numero_carte_electeur = ?`;
-  db.query(query, [email, telephone, codeOTP, numElecteur], async (err) => {
-    if (err) return res.status(500).json({ error: err });
+  const query = `UPDATE electeurs SET prenom = ?, email = ?, telephone = ?, code_authentification = ? WHERE numero_carte_electeur = ?`;
+  db.query(query, [prenom, email, telephone, codeOTP, numElecteur], async (err) => {
+    if (err) return res.status(500).json({ error: "Erreur lors de l'inscription" });
 
-    // Envoi du code OTP par Twilio
-    const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+    console.log("Mise à jour réussie pour l'électeur :", numElecteur);
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, //Utilisation des variables d'environnement
+        pass: process.env.EMAIL_PASS,  
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Code de vérification",
+      text: `Votre code de vérification est : ${codeOTP}`,
+    };
+
     try {
-      await client.messages.create({
-        body: `Votre code de vérification: ${codeOTP}`,
-        from: process.env.TWILIO_PHONE,
-        to: telephone,
-      });
+      await transporter.sendMail(mailOptions);
+      console.log("Email envoyé !");
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: "Échec d’envoi du SMS" });
+      console.error("Erreur d’envoi d’email:", error.message);
+      res.status(500).json({ error: "Échec d’envoi de l’email" });
     }
   });
 });
+
 app.post("/verify-otp", (req, res) => {
-    const { numElecteur, code } = req.body;
-    const query = `SELECT * FROM electeurs WHERE numero_carte_electeur = ? AND code_authentification = ?`;
-    
-    db.query(query, [numElecteur, code], (err, result) => {
-      if (err) return res.status(500).json({ error: err });
-      if (result.length > 0) res.json({ success: true });
-      else res.json({ success: false });
-    });
-  });
+  const { numElecteur, code } = req.body;
+
+  if (!numElecteur || !code) {
+    return res.status(400).json({ error: "Champs manquants" });
+  }
+
+  const query = `SELECT * FROM electeurs WHERE numero_carte_electeur = ? AND code_authentification = ?`;
   
+  db.query(query, [numElecteur, code], (err, result) => {
+    if (err) return res.status(500).json({ error: "Erreur serveur" });
+    if (result.length > 0) return res.json({ success: true });
+    res.json({ success: false });
+  });
+});
 
 app.listen(5000, () => console.log("Serveur démarré sur le port 5000"));
