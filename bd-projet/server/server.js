@@ -81,20 +81,48 @@ app.post("/register-elector", (req, res) => {
   });
 });
 
+// Vérifier les identifiants de l’électeur et récupérer ses infos
+app.post("/login-elector", (req, res) => {
+  const { numElecteur, numCNI } = req.body;
+
+  if (!numElecteur || !numCNI) {
+    return res.status(400).json({ error: "Champs obligatoires" });
+  }
+
+  const query = `SELECT nom, prenom, date_naissance, bureau_vote FROM electeurs WHERE numero_carte_electeur = ? AND numero_carte_identite = ?`;
+
+  db.query(query, [numElecteur, numCNI], (err, result) => {
+    if (err) return res.status(500).json({ error: "Erreur serveur" });
+
+    if (result.length > 0) {
+      res.json({ success: true, elector: result[0] });
+    } else {
+      res.json({ success: false, error: "Informations incorrectes" });
+    }
+  });
+});
+
+// Vérifier le code OTP
 app.post("/verify-otp", (req, res) => {
   const { numElecteur, code } = req.body;
 
   if (!numElecteur || !code) {
-    return res.status(400).json({ error: "Champs manquants" });
+    return res.status(400).json({ error: "Champs obligatoires" });
   }
 
   const query = `SELECT * FROM electeurs WHERE numero_carte_electeur = ? AND code_authentification = ?`;
-  
+
   db.query(query, [numElecteur, code], (err, result) => {
     if (err) return res.status(500).json({ error: "Erreur serveur" });
-    if (result.length > 0) return res.json({ success: true });
-    res.json({ success: false });
+
+    if (result.length > 0) {
+      res.json({ success: true });
+    } else {
+      res.json({ success: false, error: "Code incorrect" });
+    }
   });
 });
+
+
 
 app.listen(5000, () => console.log("Serveur démarré sur le port 5000"));
