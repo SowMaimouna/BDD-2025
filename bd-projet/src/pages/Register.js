@@ -59,13 +59,16 @@ const Register = () => {
           </>
         ) : (
           <>
-            <input name="prenom" placeholder="Prénom" onChange={handleChange} required />
-            <input name="email" placeholder="Adresse email" type="email" onChange={handleChange} required />
-            <input name="telephone" placeholder="Numéro de téléphone" onChange={handleChange} required />
+            <input name="prenom" placeholder="Prénom" onChange={handleChange}  autoComplete="new-password" required />
+            <input name="email" placeholder="Adresse email" type="email" onChange={handleChange}  autoComplete="new-password" required />
+            <input name="telephone" placeholder="Numéro de téléphone" onChange={handleChange}  autoComplete="new-password" required />
           </>
         )}
         <button type="submit">{step === 1 ? "Vérifier" : "S'inscrire"}</button>
       </form>
+      <p>
+        Déjà inscrit ? <a href="/login" style={{ color: "blue", cursor: "pointer", textAlign: "center" }}>Connectez-vous</a>
+      </p>
     </div>
   );
 };
