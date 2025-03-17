@@ -11,6 +11,11 @@ app.use(cors());
 app.use(bodyParser.json());
 
 const db = mysql.createConnection({
+  // host: "localhost",
+  // user: "root",
+  // password: "",
+  // database: "parrainage",
+  // port: 3307,
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -291,7 +296,7 @@ async function sendConfirmation(email, candidatId) {
 
 
 app.get("/candidats", (_req, res) => {
-  const query = "SELECT id, nom, prenom, slogan, couleur1, couleur2, couleur3, photo FROM candidat";
+  const query = "SELECT id, nom, prenom, slogan, parti, photo FROM candidat";
   db.query(query, (err, result) => {
     if (err) {
       return res.status(500).json({ error: "Erreur lors de la récupération des candidats" });
@@ -373,4 +378,5 @@ app.post('/send-otp', (req, res) => {
   );
 });
 
-app.listen(5000, () => console.log("Serveur démarré sur le port 5000"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
