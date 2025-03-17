@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import "./UploadElecteurs.css"; 
@@ -6,26 +7,52 @@ import "./UploadElecteurs.css";
 const UploadElecteurs = () => {
   const [file, setFile] = useState(null);
   const [checksum, setChecksum] = useState("");
-  const [generatedChecksum, setGeneratedChecksum] = useState("");
+  const [generatedChecksum, setGeneratedChecksum] = useState(""); 
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [username, setUsername] = useState(""); 
+  const navigate = useNavigate();
+
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login"); 
+    } else {
+      axios.get("http://localhost:5000/user", {
+        headers: { Authorization: token }
+      })
+      .then(response => {
+        setUsername(response.data.username);
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        navigate("/login");
+      });
+    }
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
 
   
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
     setFile(selectedFile);
 
-
     const reader = new FileReader();
     reader.onload = function (e) {
       const wordArray = CryptoJS.lib.WordArray.create(e.target.result);
       const hash = CryptoJS.SHA256(wordArray).toString();
-      setGeneratedChecksum(hash);
+      setGeneratedChecksum(hash); 
+      setChecksum(hash); 
     };
     reader.readAsArrayBuffer(selectedFile);
   };
 
- 
+  
   const handleUpload = async () => {
     setMessage("");
     setErrorMessage("");
@@ -36,12 +63,7 @@ const UploadElecteurs = () => {
     }
 
     if (!checksum) {
-      setErrorMessage(" Veuillez saisir l'empreinte SHA-256");
-      return;
-    }
-
-    if (checksum !== generatedChecksum) {
-      setErrorMessage(" Erreur : L'empreinte SHA-256 ne correspond pas !");
+      setErrorMessage("Veuillez saisir l'empreinte SHA-256");
       return;
     }
 
@@ -50,13 +72,17 @@ const UploadElecteurs = () => {
     formData.append("checksum", checksum);
 
     try {
+      const token = localStorage.getItem("token");
       const response = await axios.post("http://localhost:5000/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { 
+          "Content-Type": "multipart/form-data",
+          "Authorization": token
+        }
       });
 
-      setMessage("✅ " + response.data.message);
+      setMessage(" " + response.data.message);
     } catch (error) {
-      console.error(" Erreur lors de l'upload :", error);
+      console.error("Erreur lors de l'upload :", error);
       setErrorMessage("Erreur lors de l'envoi du fichier.");
     }
   };
@@ -65,19 +91,18 @@ const UploadElecteurs = () => {
     <div className="upload-container">
       <h2>Importer un fichier CSV</h2>
 
+      {}
+      <div className="user-info">
+        <p>👤 Connecté en tant que : <strong>{username}</strong></p>
+        <button onClick={handleLogout} className="logout-button">Déconnexion</button>
+      </div>
+
       <input type="file" accept=".csv" onChange={handleFileChange} />
 
       <div className="empreinte-container">
         <p><strong>Empreinte SHA-256 générée :</strong></p>
-        <p>{generatedChecksum}</p>
+        <input type="text" value={checksum} readOnly />
       </div>
-
-      <input
-        type="text"
-        placeholder="Saisissez l'empreinte SHA-256"
-        value={checksum}
-        onChange={(e) => setChecksum(e.target.value)}
-      />
 
       <button onClick={handleUpload}>Importer</button>
 
