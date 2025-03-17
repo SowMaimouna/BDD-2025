@@ -10,6 +10,7 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 
+
 // Importer les routes (une seule fois)
 const routes = require('./routes');  // routes.js
 
@@ -20,3 +21,6 @@ app.use('/api', routes);  // Route principale pour toutes les API
 app.listen(5000, () => {
     console.log('Server is running on port 5000');
 });
+
+app.use('/uploads', express.static('uploads')); // Permet d'accéder aux images via URL
+

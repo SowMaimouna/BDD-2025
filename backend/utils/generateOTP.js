@@ -1,10 +1,5 @@
-function generateOTP(length = 6) {
-    const digits = "0123456789";
-    let otp = "";
-    for (let i = 0; i < length; i++) {
-        otp += digits[Math.floor(Math.random() * 10)];
-    }
-    return otp;
+function generateOTP() {
+    return Math.floor(100000 + Math.random() * 900000).toString(); // Code OTP à 6 chiffres
 }
 
 module.exports = generateOTP;

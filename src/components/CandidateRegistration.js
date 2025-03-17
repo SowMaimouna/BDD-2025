@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
-import { Container, Paper, Typography, TextField, Button, Grid } from '@mui/material';
-import axios from 'axios';
+import React, { useState } from "react";
+import {
+    Container, Paper, Typography, TextField, Button, Grid,
+    CircularProgress, IconButton, Box
+} from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
+import axios from "axios";
 
 function CandidateRegistration() {
-    // step 1 : vérification du numéro de carte d’électeur
-    // step 2 : affichage des infos de base et saisie des infos complémentaires
     const [step, setStep] = useState(1);
-    const [numCarteElecteur, setNumCarteElecteur] = useState('');
-    const [baseInfo, setBaseInfo] = useState(null); // contiendra { nom, prenom, date_naissance }
-    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [numero_carte_electeur, setNumCarteElecteur] = useState("");
+    const [baseInfo, setBaseInfo] = useState(null);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState(false);
+    const [openSnackbar, setOpenSnackbar] = useState(false);
+    const [photo, setPhoto] = useState(null);
+
 
     // Données complémentaires à saisir
     const [complementData, setComplementData] = useState({
@@ -22,24 +29,27 @@ function CandidateRegistration() {
         urlInfo: '',
     });
 
-    // Appel à l'API pour vérifier le numéro de carte d'électeur
+
     const handleVerify = async () => {
-        setError('');
+        if (!numero_carte_electeur.trim()) {
+            setError("Veuillez entrer un numéro de carte.");
+            setOpenSnackbar(true);
+            return;
+        }
+
+        setError("");
+        setLoading(true);
         try {
-            // Appel de l'API de vérification
-            const response = await axios.get(`http://localhost:5000/api/electeurs/check?num=${numCarteElecteur}`);
+            const response = await axios.get(
+                `http://localhost:5000/api/electeurs/check?num=${numero_carte_electeur}`
+            );
+            console.log("Réponse API:", response.data); // 👈 Ajout pour voir la réponse
+
             const data = response.data;
-            // On suppose que l'API renvoie un objet avec :
-            // { exists: true, registered: false, nom, prenom, date_naissance } si OK
-            // { exists: false } si le candidat n'est pas dans le fichier électoral
-            // { exists: true, registered: true } si déjà enregistré
 
             if (!data.exists) {
-                setError("Le candidat considéré n’est pas présent dans le fichier électoral.");
-            } else if (data.registered) {
-                setError("Candidat déjà enregistré !");
+                setError("Le candidat n’est pas présent dans le fichier électoral.");
             } else {
-                // Si tout est OK, on affiche les infos de base et passe à l'étape 2
                 setBaseInfo({
                     nom: data.nom,
                     prenom: data.prenom,
@@ -48,174 +58,214 @@ function CandidateRegistration() {
                 setStep(2);
             }
         } catch (err) {
-            console.error(err);
+            console.error("Erreur API:", err);
             setError("Erreur lors de la vérification. Veuillez réessayer.");
         }
+        setLoading(false);
+        setOpenSnackbar(true);
     };
 
-    // Envoi de la candidature (toutes les données)
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        try {
-            // Fusionner les données de base et complémentaires
-            const fullData = {
-                numCarteElecteur,
-                ...baseInfo, // nom, prenom, date_naissance
-                ...complementData,
-            };
+        setError("");
+        setLoading(true);
 
-            const response = await axios.post('http://localhost:5000/api/candidat', fullData);
-            alert("Candidat ajouté avec succès !");
-            // Optionnel : réinitialiser le formulaire ou rediriger
+        if (!complementData.email.trim() || !complementData.telephone.trim()) {
+            setError("Email et téléphone sont obligatoires.");
+            setOpenSnackbar(true);
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+
+            // Ajouter les autres données au formulaire
+            formData.append("numCarteElecteur", numero_carte_electeur);
+            Object.keys(baseInfo).forEach((key) => formData.append(key, baseInfo[key]));
+            Object.keys(complementData).forEach((key) => {
+                if (key !== "photo") { // On ajoute tout sauf la photo ici
+                    formData.append(key, complementData[key]);
+                }
+            });
+
+            // Ajouter la photo si elle est définie
+            if (complementData.photo) {
+                formData.append("photo", complementData.photo);
+            }
+
+            // Envoyer les données en `multipart/form-data`
+            await axios.post("http://localhost:5000/api/candidat", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            setSuccess(true);
+            setStep(1);
+            setNumCarteElecteur("");
+            setBaseInfo(null);
+            setComplementData({
+                email: '',
+                telephone: '',
+                parti: '',
+                slogan: '',
+                couleur1: '',
+                couleur2: '',
+                couleur3: '',
+                urlInfo: '',
+                photo: null, // Réinitialiser la photo
+            });
         } catch (err) {
-            console.error(err);
             setError("Erreur lors de l'enregistrement du candidat.");
         }
+        setLoading(false);
+        setOpenSnackbar(true);
     };
 
+
     return (
-        <Container maxWidth="sm">
-            <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
+        <Container maxWidth="md">
+            <Paper elevation={6} sx={{ p: 4, mt: 4, borderRadius: 3 }}>
+                <Box textAlign="center" mb={2}>
+                    <Typography variant="h4" fontWeight="bold">
+                        {step === 1 ? "Vérification du Candidat" : "Inscription du Candidat"}
+                    </Typography>
+                </Box>
+
                 {step === 1 && (
-                    <>
-                        <Typography variant="h5" textAlign="center" gutterBottom>
-                            Vérification de l'électeur
-                        </Typography>
+                    <Box textAlign="center">
                         <TextField
                             fullWidth
                             label="Numéro de carte d’électeur"
-                            value={numCarteElecteur}
+                            value={numero_carte_electeur}
                             onChange={(e) => setNumCarteElecteur(e.target.value)}
                             sx={{ mb: 2 }}
                         />
-                        {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
-                        <Button variant="contained" color="primary" fullWidth onClick={handleVerify}>
-                            Vérifier
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            fullWidth
+                            onClick={handleVerify}
+                            disabled={loading || !numero_carte_electeur.trim()}
+                            startIcon={loading && <CircularProgress size={20} color="inherit" />}
+                        >
+                            {loading ? "Vérification..." : "Vérifier"}
                         </Button>
-                    </>
+                    </Box>
                 )}
 
                 {step === 2 && baseInfo && (
-                    <>
+                    <Box>
+                        <IconButton onClick={() => setStep(1)}>
+                            <ArrowBack />
+                        </IconButton>
                         <Typography variant="h6" gutterBottom>
-                            Informations de base de l’électeur
+                            Informations du candidat
                         </Typography>
-                        <Typography>Nom : {baseInfo.nom}</Typography>
-                        <Typography>Prénom : {baseInfo.prenom}</Typography>
-                        <Typography>Date de naissance : {baseInfo.date_naissance}</Typography>
+                        <Box sx={{ backgroundColor: "#f9f9f9", padding: 2, borderRadius: 2, mb: 2 }}>
+                            <Typography><strong>Nom :</strong> {baseInfo.nom || "Non disponible"}</Typography>
+                            <Typography><strong>Prénom :</strong> {baseInfo.prenom || "Non disponible"}</Typography>
+                            <Typography><strong>Date de naissance :</strong> {baseInfo.date_naissance?.split('T')[0] || "Non disponible"}</Typography>
+                        </Box>
 
                         <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                            Informations complémentaires
+                            Informations Complémentaires
                         </Typography>
                         <form onSubmit={handleSubmit}>
                             <Grid container spacing={2}>
                                 <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Email"
-                                        name="email"
-                                        value={complementData.email}
-                                        onChange={(e) =>
-                                            setComplementData({ ...complementData, email: e.target.value })
-                                        }
-                                        required
+                                    <TextField fullWidth label="Email" required
+                                               value={complementData.email}
+                                               onChange={(e) =>
+                                                   setComplementData({ ...complementData, email: e.target.value })
+                                               }
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Téléphone"
-                                        name="telephone"
-                                        value={complementData.telephone}
-                                        onChange={(e) =>
-                                            setComplementData({ ...complementData, telephone: e.target.value })
-                                        }
-                                        required
+                                    <TextField fullWidth label="Téléphone" required
+                                               value={complementData.telephone}
+                                               onChange={(e) =>
+                                                   setComplementData({ ...complementData, telephone: e.target.value })
+                                               }
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Parti politique (facultatif)"
-                                        name="parti"
-                                        value={complementData.parti}
-                                        onChange={(e) =>
-                                            setComplementData({ ...complementData, parti: e.target.value })
-                                        }
-                                    />
+                                     <TextField fullWidth label="Parti politique (facultatif)"
+                                           value={complementData.parti}
+                                           onChange={(e) =>
+                                               setComplementData({ ...complementData, parti: e.target.value })
+                                           }
+                                     />
                                 </Grid>
                                 <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Slogan (facultatif)"
-                                        name="slogan"
-                                        value={complementData.slogan}
-                                        onChange={(e) =>
-                                            setComplementData({ ...complementData, slogan: e.target.value })
-                                        }
+                                    <TextField fullWidth label="Slogan (facultatif)"
+                                          value={complementData.slogan}
+                                          onChange={(e) =>
+                                               setComplementData({ ...complementData, slogan: e.target.value })
+                                          }
                                     />
                                 </Grid>
                                 <Grid item xs={4}>
-                                    <TextField
-                                        fullWidth
-                                        label="Couleur 1"
-                                        name="couleur1"
+                                    <label>Couleur 1 :</label>
+                                    <input
                                         type="color"
                                         value={complementData.couleur1}
                                         onChange={(e) =>
                                             setComplementData({ ...complementData, couleur1: e.target.value })
                                         }
+                                        style={{ width: "100%", height: "40px", border: "none", cursor: "pointer" }}
                                     />
                                 </Grid>
                                 <Grid item xs={4}>
-                                    <TextField
-                                        fullWidth
-                                        label="Couleur 2"
-                                        name="couleur2"
+                                    <label>Couleur 2 :</label>
+                                    <input
                                         type="color"
                                         value={complementData.couleur2}
                                         onChange={(e) =>
                                             setComplementData({ ...complementData, couleur2: e.target.value })
                                         }
+                                        style={{ width: "100%", height: "40px", border: "none", cursor: "pointer" }}
                                     />
                                 </Grid>
                                 <Grid item xs={4}>
-                                    <TextField
-                                        fullWidth
-                                        label="Couleur 3"
-                                        name="couleur3"
+                                    <label>Couleur 3 :</label>
+                                    <input
                                         type="color"
                                         value={complementData.couleur3}
                                         onChange={(e) =>
                                             setComplementData({ ...complementData, couleur3: e.target.value })
                                         }
+                                        style={{ width: "100%", height: "40px", border: "none", cursor: "pointer" }}
+                                    />
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <TextField fullWidth label="URL (facultatif)"
+                                               value={complementData.urlInfo}
+                                               onChange={(e) =>
+                                                   setComplementData({ ...complementData, urlInfo: e.target.value })
+                                               }
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="URL Infos (facultatif)"
-                                        name="urlInfo"
-                                        value={complementData.urlInfo}
-                                        onChange={(e) =>
-                                            setComplementData({ ...complementData, urlInfo: e.target.value })
-                                        }
+                                    <label>Photo du candidat :</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => setComplementData({ ...complementData, photo: e.target.files[0] })}
                                     />
                                 </Grid>
-                                {error && (
-                                    <Grid item xs={12}>
-                                        <Typography color="error">{error}</Typography>
-                                    </Grid>
-                                )}
+
                                 <Grid item xs={12}>
-                                    <Button type="submit" variant="contained" color="primary" fullWidth>
-                                        Enregistrer le Candidat
+                                    <Button type="submit" variant="contained" color="primary" fullWidth disabled={loading}>
+                                        {loading ? "Enregistrement..." : "Enregistrer le Candidat"}
                                     </Button>
                                 </Grid>
                             </Grid>
                         </form>
-                    </>
+                    </Box>
                 )}
             </Paper>
         </Container>

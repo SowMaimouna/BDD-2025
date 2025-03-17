@@ -5,8 +5,9 @@ import Home from './components/Home';
 import CandidateList from './components/CandidateList';
 import CandidateRegistration from './components/CandidateRegistration';
 import CandidateDetail from './components/CandidateDetail';
-import ParrainageConfig from './components/ParrainageConfig';
-
+import VerifyOTP from "./components/VerifyOTP";
+import CandidateParrainages from "./components/CandidateParrainages";
+import ParrainageConfig from "./components/ParrainageConfig";
 
 
 function App() {
@@ -18,9 +19,10 @@ function App() {
                         Gestion des Parrainages
                     </Typography>
                     <Button color="inherit" component={Link} to="/">Accueil</Button>
-                    <Button color="inherit" component={Link} to="/candidats">Candidats</Button>
-                    <Button color="inherit" component={Link} to="/candidats/new">Ajouter Candidat</Button>
+                    <Button color="inherit" component={Link} to="/candidat">Candidats</Button>
+                    <Button color="inherit" component={Link} to="/candidat/new">Ajouter Candidat</Button>
                     <Button color="inherit" component={Link} to="/parrainage">Parrainage</Button>
+
 
                 </Toolbar>
             </AppBar>
@@ -28,10 +30,14 @@ function App() {
             <Container sx={{ mt: 4 }}>
                 <Routes>
                     <Route path="/" element={<Home />} />
-                    <Route path="/candidats" element={<CandidateList />} />
-                    <Route path="/candidats/new" element={<CandidateRegistration />} />
-                    <Route path="/candidats/:id" element={<CandidateDetail />} />
+                    <Route path="/candidat" element={<CandidateList />} />
+                    <Route path="/candidat/new" element={<CandidateRegistration />} />
+                    <Route path="/candidat/:id" element={<CandidateDetail />} />
+                    <Route path="/verify-otp" element={<VerifyOTP />} />
+                    <Route path="/candidat/:id/parrainages" element={<CandidateParrainages />} />
                     <Route path="/parrainage" element={<ParrainageConfig />} />
+
+
                 </Routes>
             </Container>
         </Router>
