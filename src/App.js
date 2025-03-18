@@ -5,7 +5,6 @@ import Home from './components/Home';
 import CandidateList from './components/CandidateList';
 import CandidateRegistration from './components/CandidateRegistration';
 import CandidateDetail from './components/CandidateDetail';
-import VerifyOTP from "./components/VerifyOTP";
 import CandidateParrainages from "./components/CandidateParrainages";
 import ParrainageConfig from "./components/ParrainageConfig";
 
@@ -33,7 +32,6 @@ function App() {
                     <Route path="/candidat" element={<CandidateList />} />
                     <Route path="/candidat/new" element={<CandidateRegistration />} />
                     <Route path="/candidat/:id" element={<CandidateDetail />} />
-                    <Route path="/verify-otp" element={<VerifyOTP />} />
                     <Route path="/candidat/:id/parrainages" element={<CandidateParrainages />} />
                     <Route path="/parrainage" element={<ParrainageConfig />} />
 

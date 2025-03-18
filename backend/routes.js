@@ -17,14 +17,14 @@ require('dotenv').config();  // Charger les variables d'environnement
 
 // Ajouter un candidat
 router.post("/candidat", upload.single("photo"), (req, res) => {
-    const { numero_carte_electeur, email, telephone, parti, slogan, couleur1, couleur2, couleur3, urlInfo } = req.body;
+    const { numero_carte_electeur, email, telephone, parti, slogan, couleur1, couleur2, couleur3, url} = req.body;
     const photo = req.file ? req.file.filename : null; // Récupérer le nom du fichier
 
     if (!numero_carte_electeur || !email || !telephone) {
         return res.status(400).json({ error: "Les champs numCarteElecteur, email et telephone sont obligatoires" });
     }
 
-    const query = "INSERT INTO candidat (numero_carte_electeur, email, telephone, parti, slogan, couleur1, couleur2, couleur3, urlInfo, photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const query = "INSERT INTO candidat (numero_carte_electeur, email, telephone, parti, slogan, couleur1, couleur2, couleur3, url, photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     db.getConnection((err, connection) => {
         if (err) {
@@ -34,7 +34,7 @@ router.post("/candidat", upload.single("photo"), (req, res) => {
 
         connection.query(
             query,
-            [numero_carte_electeur, email, telephone, parti, slogan, couleur1, couleur2, couleur3, urlInfo, photo],
+            [numero_carte_electeur, email, telephone, parti, slogan, couleur1, couleur2, couleur3, url, photo],
             (err, result) => {
                 connection.release();
 
@@ -71,20 +71,7 @@ router.get('/candidat', (req, res) => {
         });
     });
 });
-router.get('/candidat/:id', (req, res) => {
-    const { id } = req.params;
-    const query = 'SELECT * FROM candidat WHERE id = ?';
 
-    db.query(query, [id], (err, result) => {
-        if (err) {
-            return res.status(500).json({ error: 'Erreur serveur' });
-        }
-        if (result.length === 0) {
-            return res.status(404).json({ error: 'Candidat non trouvé' });
-        }
-        res.json(result[0]);
-    });
-});
 // Récupérer un candidat par son ID
 router.get('/candidat/:id', (req, res) => {
     const { id } = req.params;
@@ -154,9 +141,10 @@ router.get('/electeurs/check', (req, res) => {
     });
 });
 
+
 router.post('/candidat/send-otp', async (req, res) => {
     const { email } = req.body;
-    console.log("Requête reçue pour envoyer OTP à :", email); // Ajout du log
+    console.log("Requête reçue pour envoyer OTP à :", email);
 
     if (!email) {
         console.log("Erreur : email non fourni");
@@ -164,7 +152,7 @@ router.post('/candidat/send-otp', async (req, res) => {
     }
 
     const otp = generateOTP();
-    console.log("OTP généré :", otp); // Vérifier si l’OTP est bien généré
+    console.log("OTP généré :", otp);
 
     const updateQuery = 'UPDATE candidat SET otp_code = ? WHERE email = ?';
     db.query(updateQuery, [otp, email], async (err) => {
@@ -174,9 +162,6 @@ router.post('/candidat/send-otp', async (req, res) => {
         }
 
         console.log("OTP enregistré en DB pour", email);
-
-        // Vérifier que les variables d’environnement sont bien chargées
-        console.log("Email utilisé pour l'envoi :", process.env.EMAIL_USER);
 
         const transporter = nodemailer.createTransport({
             service: "gmail",

@@ -26,7 +26,7 @@ function CandidateRegistration() {
         couleur1: '',
         couleur2: '',
         couleur3: '',
-        urlInfo: '',
+        url: '',
     });
 
 
@@ -82,7 +82,7 @@ function CandidateRegistration() {
             const formData = new FormData();
 
             // Ajouter les autres données au formulaire
-            formData.append("numCarteElecteur", numero_carte_electeur);
+            formData.append("numero_carte_electeur", numero_carte_electeur);
             Object.keys(baseInfo).forEach((key) => formData.append(key, baseInfo[key]));
             Object.keys(complementData).forEach((key) => {
                 if (key !== "photo") { // On ajoute tout sauf la photo ici
@@ -114,7 +114,7 @@ function CandidateRegistration() {
                 couleur1: '',
                 couleur2: '',
                 couleur3: '',
-                urlInfo: '',
+                url: '',
                 photo: null, // Réinitialiser la photo
             });
         } catch (err) {
@@ -243,9 +243,9 @@ function CandidateRegistration() {
 
                                 <Grid item xs={12}>
                                     <TextField fullWidth label="URL (facultatif)"
-                                               value={complementData.urlInfo}
+                                               value={complementData.url}
                                                onChange={(e) =>
-                                                   setComplementData({ ...complementData, urlInfo: e.target.value })
+                                                   setComplementData({ ...complementData, url: e.target.value })
                                                }
                                     />
                                 </Grid>

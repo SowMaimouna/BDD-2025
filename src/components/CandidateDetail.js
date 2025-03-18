@@ -28,19 +28,6 @@ function CandidateDetail() {
             });
     }, [id]);
 
-    useEffect(() => {
-        console.log("ID récupéré:", id);
-        axios.get(`http://localhost:5000/api/candidat/${id}`)
-            .then(response => {
-                setCandidat(response.data);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError("Erreur lors de la récupération du candidat.");
-                setLoading(false);
-            });
-    }, [id]);
-
 
     const handleGenerateCode = async () => {
         if (!candidat?.email) {
@@ -48,10 +35,12 @@ function CandidateDetail() {
             setOpenSnackbar(true);
             return;
         }
+        console.log("Email envoyé pour OTP:", candidat.email);
+        setSending(true);
 
             setSending(true);
         try {
-            const response = await axios.post("http://localhost:5000/api/auth/send-otp", { email: candidat.email });
+            const response = await axios.post("http://localhost:5000/api/candidat/send-otp", { email: candidat.email });
             setMessage(response.data.message || "Code envoyé avec succès !");
         } catch (error) {
             console.error(error);
